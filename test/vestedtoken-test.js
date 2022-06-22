@@ -57,7 +57,7 @@ describe("Vested Token", function () {
   it("Should prevent any transfer during timelock", async function () {
     
     let fromAlice = await vestedtoken.connect(alice);
-    await expect(fromAlice.transfer(bob.address,1)).to.be.reverted;
+    await expect( fromAlice.transfer(bob.address,1)).to.be.reverted;
   });
 
   it("Should allow transfer after timelock", async function () {
@@ -66,10 +66,12 @@ describe("Vested Token", function () {
     await network.provider.send("evm_mine") // this one will have 2021-07-01 12:00 AM as its timestamp, no matter what the previous block has
     console.log("blocktime:"+(await hre.ethers.provider.getBlock("latest")).timestamp);
     let fromAlice = await vestedtoken.connect(alice);
-    this.showBalances();
-    await expect(fromAlice.transfer(bob.address,1)).to.be.ok;
+    
+    let tx = await fromAlice.transfer(bob.address,1);
+    await tx.wait();
+    expect(tx).to.be.ok;
     let bobBalance = await token.balanceOf(bob.address);
-    this.showBalances();
+    
 
 
     let balance = await token.balanceOf(vestedtoken.address);
@@ -78,17 +80,42 @@ describe("Vested Token", function () {
     expect(bobBalance.toString()).to.be.equal("1","must be 1"); 
 
   });
-  it("Should allow emitter to remove timelock", async function () {});  
+  it("Should allow emitter to bypass timelock", async function () {
+    let fromEmitter = await vestedtoken.connect(emitter);
+    let b0 = await token.balanceOf(vestedtoken.address);
+    let b1 = await token.balanceOf(alice.address);
+
+    let tx = await fromEmitter.earlyUnlock();
+    await tx.wait();
+    let a0 = await token.balanceOf(vestedtoken.address);
+    let a1 = await token.balanceOf(alice.address);
+
+    expect(b0).to.be.eq(a1);
+    expect(b1).to.be.eq(a0);
+
+  });  
   it("Should show metadata and balance as any erc20", async function () {
     let name = await vestedtoken.name();
     let symbol = await vestedtoken.symbol();
     let decimals = await vestedtoken.decimals();
-
     expect(name).to.be.eq("Davide Token_locked");
     expect(symbol).to.be.eq("DAVlk");
     expect(decimals).to.be.eq(18);
+  });
+
+  it("Only beneficiary can spend after timelock", async function () {
+    let timelock = (await hre.ethers.provider.getBlock("latest")).timestamp + 3600;
+    await network.provider.send("evm_setNextBlockTimestamp", [timelock + 1]);
+    await network.provider.send("evm_mine");
+    let fromCharlie = await vestedtoken.connect(charlie);
+    let fromAlice = await vestedtoken.connect(alice);
+    let tx = await fromAlice.transfer(bob.address,1);
+    await tx.wait();
+    expect(tx).to.be.ok;
+    await expect( fromCharlie.transfer(bob.address,1)).to.be.reverted;
+
+
   });  
-  it("Should work as erc20 after timelock", async function () {});  
 
   
 });

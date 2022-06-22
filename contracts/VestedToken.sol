@@ -11,6 +11,8 @@ contract VestedToken is IERC20, IERC20Metadata {
     address public emitter;
     uint256 public timelock;
 
+    event EarlyUnlock(address indexed _emitter, address indexed _beneficiary, uint256 _value);
+
     constructor(address _token, 
                 address _beneficiary, 
                 address _emitter,
@@ -27,14 +29,14 @@ contract VestedToken is IERC20, IERC20Metadata {
      * @dev Returns the name of the token.
      */
     function name() external virtual override view returns (string memory){
-        return string.concat(IERC20Metadata(token).name(),"_locked");
+        return string(bytes.concat(bytes(IERC20Metadata(token).name()),"_locked"));
     }
 
     /**
      * @dev Returns the symbol of the token.
      */
     function symbol() external virtual override view returns (string memory){
-        return string.concat(IERC20Metadata(token).symbol(),"lk");
+        return  string(bytes.concat(bytes(IERC20Metadata(token).symbol()),"lk"));
     }
 
     /**
@@ -73,6 +75,7 @@ contract VestedToken is IERC20, IERC20Metadata {
      * Emits a {Transfer} event.
      */
     function transfer(address to, uint256 amount) external virtual override returns (bool){
+        require(msg.sender == beneficiary);
         require(block.timestamp > timelock, "Timelock still in place");
         emit Transfer(beneficiary, to, amount);
         bool retval = IERC20(token).transfer(to, amount);
@@ -104,6 +107,20 @@ contract VestedToken is IERC20, IERC20Metadata {
     ) external virtual override returns (bool){
         return false;
     }
+
+   /**
+     * @dev earlyUnlock can unlock the vesting before deadline, it 
+     * can be called by the emitter only
+     */
+    function earlyUnlock()external returns (bool){
+        require(msg.sender == emitter);
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        require(amount>0);
+        emit EarlyUnlock(emitter, beneficiary, amount);
+        return IERC20(token).transfer(beneficiary, amount);
+    }
+
+
 
 
 }
