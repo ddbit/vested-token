@@ -29,14 +29,14 @@ contract VestedToken is IERC20, IERC20Metadata {
 
 
     /**
-     * @dev Returns the name of the token.
+     * @dev Returns the name of the vested token.
      */
     function name() external virtual override view returns (string memory){
         return string(bytes.concat(bytes(IERC20Metadata(token).name()),"_locked"));
     }
 
     /**
-     * @dev Returns the symbol of the token.
+     * @dev Returns the symbol of the vested token.
      */
     function symbol() external virtual override view returns (string memory){
         return  string(bytes.concat(bytes(IERC20Metadata(token).symbol()),"lk"));
@@ -50,7 +50,7 @@ contract VestedToken is IERC20, IERC20Metadata {
     }
 
     /**
-     * @dev Returns the amount of tokens in existence.
+     * @dev Returns the amount of tokens locked in this contract.
      */
     function totalSupply() external virtual override view returns (uint256){
         return IERC20(token).balanceOf(address(this));
@@ -110,7 +110,7 @@ contract VestedToken is IERC20, IERC20Metadata {
     }
 
    /**
-     * @dev earlyUnlock can unlock the vesting before deadline, it 
+     * @dev earlyUnlock can unlock the vested tokens before deadline, it 
      * can be called by the emitter only
      */
     function earlyUnlock()external returns (bool){
