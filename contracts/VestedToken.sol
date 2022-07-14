@@ -9,18 +9,21 @@ contract VestedToken is IERC20, IERC20Metadata {
     address public token;
     address public beneficiary;
     address public emitter;
-    uint256 public timelock;
+    uint256 public cliffEndTime;
+    uint256 public vestingEndTime;
 
     event EarlyUnlock(address indexed _emitter, address indexed _beneficiary, uint256 _value);
 
     constructor(address _token, 
                 address _beneficiary, 
                 address _emitter,
-                uint256 _timelock) {
+                uint256 _cliffEndTime,
+                uint256 _vestingEndTime) {
         token = _token;
         beneficiary = _beneficiary;
         emitter = _emitter;
-        timelock = _timelock;
+        cliffEndTime = _cliffEndTime;
+        vestingEndTime = _vestingEndTime;
 
     }
 
@@ -45,8 +48,6 @@ contract VestedToken is IERC20, IERC20Metadata {
     function decimals() external virtual override view returns (uint8){
         return IERC20Metadata(token).decimals();
     }
-
-
 
     /**
      * @dev Returns the amount of tokens in existence.
@@ -76,7 +77,7 @@ contract VestedToken is IERC20, IERC20Metadata {
      */
     function transfer(address to, uint256 amount) external virtual override returns (bool){
         require(msg.sender == beneficiary);
-        require(block.timestamp > timelock, "Timelock still in place");
+        require(block.timestamp > vestingEndTime, "Lock still in place");
         emit Transfer(beneficiary, to, amount);
         bool retval = IERC20(token).transfer(to, amount);
         if(retval==false) revert();
@@ -120,6 +121,17 @@ contract VestedToken is IERC20, IERC20Metadata {
         return IERC20(token).transfer(beneficiary, amount);
     }
 
+   /**
+     * @dev pullBack can send the funds back to the emitter, it 
+     * can be called by the emitter only and only before the cliff period is expired
+    */
+    function pullBack() external returns (bool){
+        require(msg.sender == emitter);
+        require(block.timestamp < cliffEndTime);
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        require(amount>0);
+        return IERC20(token).transfer(emitter, amount);
+    }
 
 
 
