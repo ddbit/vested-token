@@ -3,46 +3,24 @@ pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/TokenTimelock.sol";
+import "./TimelockFactory.sol";
 
+contract TokenProxy{
 
-contract TimelockFactory{
-
+    address public factory;
     address public token;
-    uint256 public counter=0;
     string public name;
-    uint8 public decimals;
     string public symbol;
+    uint16 public decimals;
 
-    mapping(address => address[]) public positionByBeneficiary;
-    mapping(address => uint256)   public countByBeneficiary;
 
-    address [] public positions;
 
-    event PositionCreated(address,address,uint256);
-
-    constructor(address _token){
-        token = _token;
+    constructor(address _factory){
+        factory = _factory;
+        token =  TimelockFactory(factory).token();
         name = string.concat(IERC20Metadata(token).name(),"_locked");
         symbol = string.concat(IERC20Metadata(token).symbol(),"_lk");
         decimals = IERC20Metadata(token).decimals();
-    }
-
-    function createNew(
-        address _beneficiary, 
-        uint256 _releaseTime) 
-    public {
-        TokenTimelock t = new TokenTimelock(
-            IERC20(token), 
-            _beneficiary, 
-            _releaseTime
-        );
-
-        positions.push(address(t));
-        counter ++;
-        positionByBeneficiary[_beneficiary].push(address(t));
-        countByBeneficiary[_beneficiary]++;
-        emit PositionCreated(address(t), _beneficiary, _releaseTime);
     }
 
 
@@ -51,8 +29,8 @@ contract TimelockFactory{
      */
     function totalSupply() external view returns (uint256){
         uint256 supply = 0;
-        for(uint k=0;k<positions.length;k++){
-            uint256 b = IERC20(token).balanceOf(positions[k]);
+        for(uint k=0;k<TimelockFactory(factory).counter();k++){
+            uint256 b = IERC20(token).balanceOf(TimelockFactory(factory).positions(k));
             supply += b;
         }
         return supply;
@@ -63,8 +41,8 @@ contract TimelockFactory{
      */
     function balanceOf(address account) external view returns (uint256){
         uint256 balance = 0;
-        for(uint k=0;k<countByBeneficiary[account];k++){
-            uint256 b = IERC20(token).balanceOf(positionByBeneficiary[account][k]);
+        for(uint k=0;k<TimelockFactory(factory).countByBeneficiary(account);k++){
+            uint256 b = IERC20(token).balanceOf(TimelockFactory(factory).positionByBeneficiary(account,k));
             balance += b;
         }
         return balance;
