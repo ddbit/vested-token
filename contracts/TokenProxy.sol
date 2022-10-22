@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./TimelockFactory.sol";
 
-contract TokenProxy{
+contract TokenProxy is IERC20, IERC20Metadata{
 
     address public factory;
     address public token;
     string public name;
     string public symbol;
-    uint16 public decimals;
+    uint8 public decimals;
 
 
 
