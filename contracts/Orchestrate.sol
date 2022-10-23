@@ -9,7 +9,10 @@ import "./TestToken.sol";
 contract Orchestrate{
     constructor(){
         TestToken token = new TestToken(1000);
+        token.transfer(msg.sender, 1000);
         TimelockFactory factory = new TimelockFactory(address(token));
         TokenProxy proxy = new TokenProxy(address(factory));
+        factory.createNew(msg.sender, block.timestamp + 3600);
+    
     }
 }
